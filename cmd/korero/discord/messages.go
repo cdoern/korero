@@ -1,13 +1,14 @@
 package discord
 
 import (
-	"fmt"
 	"korero/utils"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +22,11 @@ var (
 		RunE:    messages,
 		Example: "korero discord messages 12345",
 	}
+)
+
+var (
+	table *tablewriter.Table
+	rows  chan []string
 )
 
 func messagesFlags() {
@@ -40,6 +46,15 @@ func messages(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// create and set up channel writer for the message table
+	rows = make(chan []string)
+	table = tablewriter.NewWriter(os.Stdout)
+	generateAscii(table)
+	go func() {
+		table.ContinuousRender(rows)
+	}()
+
+	// ad discord event listeners
 	dg.AddHandler(list)
 	dg.Identify.Intents = discordgo.IntentsGuildMessages
 
@@ -57,5 +72,14 @@ func messages(cmd *cobra.Command, args []string) error {
 }
 
 func list(dg *discordgo.Session, message *discordgo.MessageCreate) {
-	fmt.Println(message.Content)
+	t, err := message.Timestamp.Parse()
+	if err != nil {
+		os.Exit(125)
+	}
+	// write new content to the table
+	rows <- []string{t.Format(time.RFC822), message.Content, message.Author.Username}
+}
+
+func generateAscii(table *tablewriter.Table) {
+	table.SetHeader([]string{"Time", "Message", "User"})
 }

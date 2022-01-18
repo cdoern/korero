@@ -7,6 +7,17 @@ github.com/gorilla/websocket
 # github.com/inconshreveable/mousetrap v1.0.0
 ## explicit
 github.com/inconshreveable/mousetrap
+# github.com/jedib0t/go-pretty/v6 v6.2.4
+## explicit; go 1.13
+# github.com/mattn/go-runewidth v0.0.10
+## explicit; go 1.9
+github.com/mattn/go-runewidth
+# github.com/olekukonko/tablewriter v0.0.5 => github.com/cdoern/tablewriter v0.0.6
+## explicit; go 1.12
+github.com/olekukonko/tablewriter
+# github.com/rivo/uniseg v0.1.0
+## explicit; go 1.12
+github.com/rivo/uniseg
 # github.com/spf13/cobra v1.3.0
 ## explicit; go 1.15
 github.com/spf13/cobra
