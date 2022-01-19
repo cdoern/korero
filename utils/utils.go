@@ -2,12 +2,19 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 func LoginDiscord(token string) (*discordgo.Session, error) {
+	fmt.Print(
+		"    __ __\n" +
+			"   / //_/___  ________ _________ \n" +
+			"  / ,< / __ \\/___/ _ \\/ ___/ __ \\\n" +
+			" / /| / /_/ / / /  __/ /  / /_/ /\n" +
+			"/_/ |_\\____/_/  \\___/_/   \\____/\n\n")
 	if len(token) > 0 {
 		if err := os.Setenv("KORERO_DISCORD_TOKEN", token); err != nil {
 			return nil, err
