@@ -20,9 +20,6 @@ var (
 		Example: "korero discord login 12345",
 	}
 )
-var (
-	Token string
-)
 
 func loginFlags() {
 
@@ -33,6 +30,12 @@ func init() {
 }
 
 func login(cmd *cobra.Command, args []string) error {
+	fmt.Print(
+		"    __ __\n" +
+			"   / //_/___  ________ _________ \n" +
+			"  / ,< / __ \\/___/ _ \\/ ___/ __ \\\n" +
+			" / /| / /_/ / / /  __/ /  / /_/ /\n" +
+			"/_/ |_\\____/_/  \\___/_/   \\____/")
 	if len(args) > 0 {
 		Token = args[0]
 		if err := os.Setenv("KORERO_DISCORD_TOKEN", Token); err != nil {

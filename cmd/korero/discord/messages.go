@@ -41,6 +41,7 @@ func messages(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		Token = args[0]
 	}
+	// login to the discord account given
 	dg, err := utils.LoginDiscord(Token)
 	if err != nil {
 		return err

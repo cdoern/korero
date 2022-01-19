@@ -1,5 +1,5 @@
 # github.com/bwmarrin/discordgo v0.23.2
-## explicit; go 1.10
+## explicit
 github.com/bwmarrin/discordgo
 # github.com/gorilla/websocket v1.4.0
 ## explicit
@@ -8,28 +8,28 @@ github.com/gorilla/websocket
 ## explicit
 github.com/inconshreveable/mousetrap
 # github.com/jedib0t/go-pretty/v6 v6.2.4
-## explicit; go 1.13
+## explicit
 # github.com/mattn/go-runewidth v0.0.10
-## explicit; go 1.9
+## explicit
 github.com/mattn/go-runewidth
 # github.com/olekukonko/tablewriter v0.0.5 => github.com/cdoern/tablewriter v0.0.6
-## explicit; go 1.12
+## explicit
 github.com/olekukonko/tablewriter
 # github.com/rivo/uniseg v0.1.0
-## explicit; go 1.12
+## explicit
 github.com/rivo/uniseg
 # github.com/spf13/cobra v1.3.0
-## explicit; go 1.15
+## explicit
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
-## explicit; go 1.12
+## explicit
 github.com/spf13/pflag
 # golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-## explicit; go 1.17
+## explicit
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/salsa20/salsa
 # golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
-## explicit; go 1.17
+## explicit
 golang.org/x/sys/cpu

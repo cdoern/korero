@@ -14,4 +14,5 @@ var (
 func init() {
 	DiscordCommand.AddCommand(DiscordLoginCommand)
 	DiscordCommand.AddCommand(DiscordMessagesCommand)
+	DiscordCommand.AddCommand(DiscordSetupCommand)
 }
