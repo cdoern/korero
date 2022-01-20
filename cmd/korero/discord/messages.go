@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"bufio"
 	"fmt"
 	"korero/utils"
 	"os"
@@ -26,16 +27,24 @@ var (
 )
 
 var (
-	table *tablewriter.Table
-	rows  chan []string
+	table                 *tablewriter.Table
+	rows                  chan []string
+	channel               string
+	currentSendingChannel string
 )
 
-func messagesFlags() {
+func messagesFlags(cmd *cobra.Command) {
+	flags := cmd.Flags()
 
+	chanelFlagName := "channel"
+	flags.StringVar(&channel, chanelFlagName, "", "only listen to messages in a certain channel (ID)")
 }
 
 func init() {
-	messagesFlags()
+	messagesFlags(DiscordMessagesCommand)
+	if len(channel) != 0 {
+		currentSendingChannel = channel
+	}
 }
 
 func messages(cmd *cobra.Command, args []string) error {
@@ -48,6 +57,9 @@ func messages(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	fmt.Println("to send a message to the channel in which messages are recieved, type and press enter")
+	fmt.Printf("---------------------------------------------------------------------------------------\n\n")
+
 	// create and set up channel writer for the message table
 	rows = make(chan []string)
 	table = tablewriter.NewWriter(os.Stdout)
@@ -58,23 +70,39 @@ func messages(cmd *cobra.Command, args []string) error {
 
 	// add discord event listeners
 	dg.AddHandler(list)
-
-	//dg.AddHandler(wait)
 	dg.Identify.Intents = discordgo.IntentsGuildMessages
 
 	err = dg.Open()
 	if err != nil {
 		return err
 	}
-	input := make(chan *os.File)
-	go getInput(input)
-	go sendMessage(dg, input)
+
+	foundChannel := false
+	for _, guild := range dg.State.Guilds {
+		channels, err := dg.GuildChannels(guild.ID)
+		if err != nil {
+			return err
+		}
+		for _, c := range channels {
+			if c.Type != discordgo.ChannelTypeGuildText {
+				continue
+			}
+			if c.Name == "general" {
+				currentSendingChannel = c.ID
+				foundChannel = true
+				break
+			}
+			if foundChannel {
+				break
+			}
+		}
+	}
+
+	go sendMessage(dg)
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-
-	//fmt.Println("here")
 
 	dg.Close()
 
@@ -86,25 +114,24 @@ func list(dg *discordgo.Session, message *discordgo.MessageCreate) {
 	if err != nil {
 		os.Exit(125)
 	}
-	// write new content to the table
-	rows <- []string{t.Format(time.RFC822), message.Content, message.Author.Username}
+	if message.Author.ID != dg.State.User.ID && (len(channel) == 0 || (message.ChannelID == channel)) {
+		// write new content to the table
+		rows <- []string{t.Format(time.RFC822), message.Content, message.Author.Username}
+	}
 }
 
+// generateAscii created the headers for the korero message table
 func generateAscii(table *tablewriter.Table) {
 	table.SetHeader([]string{"Time", "Message", "User"})
 }
 
-func getInput(input chan<- *os.File) {
+// sendMessage is a goroutine which contantly is reading from stdin to see if the user is trying to send a message
+func sendMessage(s *discordgo.Session) {
 	for {
-		fmt.Println("here")
-		time.Sleep(time.Second * 8)
-		input <- os.Stdin
-	}
-}
-
-func sendMessage(s *discordgo.Session, input chan *os.File) {
-	for {
-		msg := <-input
-		s.ChannelMessageSend("369139060750417925", msg.Name())
+		reader := bufio.NewReader(os.Stdin)
+		txt, _ := reader.ReadString('\n')
+		if len(txt) > 0 {
+			s.ChannelMessageSend(currentSendingChannel, txt)
+		}
 	}
 }
