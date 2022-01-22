@@ -5,8 +5,8 @@ import "github.com/spf13/cobra"
 var (
 	DiscordCommand = &cobra.Command{
 		Use:              "discord",
-		Short:            "Connect to and use the discord API",
-		Long:             "Connect to and use the discord API",
+		Short:            "connect to and use the discord API",
+		Long:             "connect to and use the discord API",
 		TraverseChildren: true,
 	}
 )

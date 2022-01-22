@@ -18,7 +18,7 @@ var (
 		Short:   "set up discord API connection",
 		Long:    setupDescription,
 		RunE:    setup,
-		Example: "korero discord login 12345",
+		Example: "korero discord setup",
 	}
 )
 var (

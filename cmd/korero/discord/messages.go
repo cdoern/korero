@@ -1,21 +1,21 @@
 package discord
 
 import (
-	"bufio"
-	"fmt"
 	"korero/utils"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/olekukonko/tablewriter"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 )
 
 var (
-	messagesDescription = `logs in to the default user and streams messages from their server`
+	messagesDescription = `logs in to the default user and streams messages from their servers`
 
 	DiscordMessagesCommand = &cobra.Command{
 		Use:     "messages TOKEN",
@@ -27,10 +27,17 @@ var (
 )
 
 var (
-	table                 *tablewriter.Table
 	rows                  chan []string
+	allRows               []string
 	channel               string
 	currentSendingChannel string
+	app                   *tview.Application
+	table                 *tview.Table
+	grid                  *tview.Grid
+	form                  *tview.Form
+	tree                  *tview.TreeView
+	serverList            []*discordgo.Guild
+	channelList           []*discordgo.Channel
 )
 
 func messagesFlags(cmd *cobra.Command) {
@@ -56,17 +63,8 @@ func messages(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("to send a message to the channel in which messages are recieved, type and press enter")
-	fmt.Printf("---------------------------------------------------------------------------------------\n\n")
-
-	// create and set up channel writer for the message table
+	// create writer for the message table
 	rows = make(chan []string)
-	table = tablewriter.NewWriter(os.Stdout)
-	generateAscii(table)
-	go func() {
-		table.ContinuousRender(rows)
-	}()
 
 	// add discord event listeners
 	dg.AddHandler(list)
@@ -76,18 +74,19 @@ func messages(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
 	foundChannel := false
 	for _, guild := range dg.State.Guilds {
+		serverList = append(serverList, guild)
 		channels, err := dg.GuildChannels(guild.ID)
 		if err != nil {
 			return err
 		}
 		for _, c := range channels {
+			channelList = append(channelList, c)
 			if c.Type != discordgo.ChannelTypeGuildText {
 				continue
 			}
-			if c.Name == "general" {
+			if c.Name == "general" { // just join a channel by default
 				currentSendingChannel = c.ID
 				foundChannel = true
 				break
@@ -98,7 +97,32 @@ func messages(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	go sendMessage(dg)
+	generateView(dg)
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyCtrlQ:
+			app.Stop()
+			os.Exit(0)
+
+		case tcell.KeyEnter:
+			sendMessage(dg, form.GetFormItem(0).(*tview.InputField).GetText())
+			form.GetFormItem(0).(*tview.InputField).SetText("")
+		}
+		return event
+	})
+
+	tree.SetSelectedFunc(func(node *tview.TreeNode) {
+		val := reflect.ValueOf(node.GetReference()).Elem()
+		id := val.FieldByName("ID").Interface().(string)
+		currentSendingChannel = id
+	})
+
+	go func() {
+		updateTable(rows)
+	}()
+	if err := app.SetRoot(grid, true).EnableMouse(true).Run(); err != nil {
+		panic(err)
+	}
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -109,29 +133,105 @@ func messages(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// list is the function to add new messages to the rows of the table
 func list(dg *discordgo.Session, message *discordgo.MessageCreate) {
 	t, err := message.Timestamp.Parse()
 	if err != nil {
 		os.Exit(125)
 	}
-	if message.Author.ID != dg.State.User.ID && (len(channel) == 0 || (message.ChannelID == channel)) {
+	if message.Author.ID != dg.State.User.ID && (len(currentSendingChannel) == 0 || (message.ChannelID == currentSendingChannel)) {
 		// write new content to the table
 		rows <- []string{t.Format(time.RFC822), message.Content, message.Author.Username}
+
 	}
 }
 
-// generateAscii created the headers for the korero message table
-func generateAscii(table *tablewriter.Table) {
-	table.SetHeader([]string{"Time", "Message", "User"})
+// generateView creates the entire grid view
+func generateView(dg *discordgo.Session) {
+	app = tview.NewApplication()
+	table = tview.NewTable().
+		SetBorders(true) // init table
+	grid = tview.NewGrid().SetRows(5, 0, 3).SetColumns(0, 0, 30).SetBorders(true)
+	form = tview.NewForm().AddInputField("Send:", "", 50, nil, nil).AddButton("Send Message", func() {
+		sendMessage(dg, form.GetFormItem(0).(*tview.InputField).GetText())
+		form.GetFormItem(0).(*tview.InputField).SetText("")
+	}) // create form and add function for when the button is clicked
+	grid.AddItem(tview.NewTextView().SetText( // title header
+		"    __ __\n"+
+			"   / //_/___  ________ _________ \n"+
+			"  / ,< / __ \\/___/ _ \\/ ___/ __ \\\n"+
+			" / /| / /_/ / / /  __/ /  / /_/ /\n"+
+			"/_/ |_\\____/_/  \\___/_/   \\____/\n\n"), 0, 0, 1, 3, 0, 0, false)
+	root := tview.NewTreeNode(".").
+		SetColor(tcell.ColorRed)
+	tree = tview.NewTreeView().SetRoot(root).
+		SetCurrentNode(root)
+	grid.AddItem(form, 1, 0, 1, 1, 0, 50, false)                                                                                                                              // add the form to the grid
+	grid.AddItem(table, 1, 1, 1, 1, 0, 50, false)                                                                                                                             // add the table to the grid
+	grid.AddItem(tview.NewTextView().SetText("<ENTER> Send Message \t <CTR Q> Exit \t <ARROW KEYS> Navigate lists").SetTextAlign(tview.AlignCenter), 2, 0, 1, 3, 0, 0, false) // add command bar to the grid
+
+	for _, server := range serverList {
+		s, err := dg.Guild(server.ID)
+		if err != nil {
+			os.Exit(125)
+		}
+		nodeServer := tview.NewTreeNode(s.Name).
+			SetReference(s).SetSelectable(false)
+		root.AddChild(nodeServer).SetColor(tcell.ColorGreen)
+		channels, err := dg.GuildChannels(server.ID)
+		if err != nil {
+			os.Exit(125)
+		}
+		for _, channel := range channels {
+			if channel.Type != discordgo.ChannelTypeGuildCategory && channel.Type != discordgo.ChannelTypeGuildVoice {
+				node := tview.NewTreeNode(channel.Name).
+					SetReference(channel).SetSelectable(true)
+				nodeServer.AddChild(node)
+			}
+		}
+
+	}
+	grid.AddItem(tree, 1, 2, 1, 1, 0, 50, false).SetTitle("Server List") // add server list to the grid
+
 }
 
-// sendMessage is a goroutine which contantly is reading from stdin to see if the user is trying to send a message
-func sendMessage(s *discordgo.Session) {
+// sendMessage reads from the inputField and sends the message to the discord channel selected
+func sendMessage(sess *discordgo.Session, txt string) {
+	if len(txt) > 0 {
+		sess.ChannelMessageSend(currentSendingChannel, txt)
+	}
+}
+
+// updateTable is called whenever the row channel is given a new entry, it redraws the entire table with the new entries.
+func updateTable(rows <-chan []string) {
 	for {
-		reader := bufio.NewReader(os.Stdin)
-		txt, _ := reader.ReadString('\n')
-		if len(txt) > 0 {
-			s.ChannelMessageSend(currentSendingChannel, txt)
-		}
+		word := 0
+		updatedRows := <-rows
+		allRows = append(allRows, updatedRows...)
+		app.QueueUpdateDraw(func() {
+			table.SetCell(0, 0, tview.NewTableCell("TIME").
+				SetTextColor(tcell.ColorBlue).
+				SetAlign(tview.AlignCenter))
+			table.SetCell(0, 1, tview.NewTableCell("MESSAGE").
+				SetTextColor(tcell.ColorBlue).
+				SetAlign(tview.AlignCenter))
+			table.SetCell(0, 2, tview.NewTableCell("USER").
+				SetTextColor(tcell.ColorBlue).
+				SetAlign(tview.AlignCenter))
+			for r := 1; r <= ((len(allRows) + 1) / 3); r++ {
+				for c := 0; c < 3; c++ {
+					color := tcell.ColorWhite
+					if c < 1 || r < 1 {
+						color = tcell.ColorYellow
+					}
+					table.SetCell(r, c,
+						tview.NewTableCell(allRows[word]).
+							SetTextColor(color).
+							SetAlign(tview.AlignCenter))
+					word = (word + 1) % len(allRows)
+				}
+			}
+			table.ScrollToEnd()
+		})
 	}
 }

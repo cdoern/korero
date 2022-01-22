@@ -21,14 +21,6 @@ var (
 	}
 )
 
-func loginFlags() {
-
-}
-
-func init() {
-	loginFlags()
-}
-
 func login(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		Token = args[0]
