@@ -30,6 +30,8 @@ var (
 	rows                  chan []string
 	allRows               []string
 	channel               string
+	user                  string
+	originalUser          string
 	currentSendingChannel string
 	app                   *tview.Application
 	table                 *tview.Table
@@ -42,6 +44,9 @@ var (
 
 func messagesFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
+
+	userFlagName := "user"
+	flags.StringVar(&user, userFlagName, "", "set the discord bot to use a specific name when sending messages")
 
 	chanelFlagName := "channel"
 	flags.StringVar(&channel, chanelFlagName, "", "only listen to messages in a certain channel (ID)")
@@ -74,6 +79,15 @@ func messages(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if len(user) > 0 {
+		originalUser = dg.State.User.Username
+		_, err := dg.UserUpdate("", "", user, "", "")
+		if err != nil {
+			os.Exit(125)
+		}
+	}
+
 	foundChannel := false
 	for _, guild := range dg.State.Guilds {
 		serverList = append(serverList, guild)
@@ -101,6 +115,12 @@ func messages(cmd *cobra.Command, args []string) error {
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlQ:
+			if len(originalUser) > 0 {
+				_, err := dg.UserUpdate("", "", originalUser, "", "")
+				if err != nil {
+					os.Exit(125)
+				}
+			}
 			app.Stop()
 			os.Exit(0)
 
@@ -112,9 +132,11 @@ func messages(cmd *cobra.Command, args []string) error {
 	})
 
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
-		val := reflect.ValueOf(node.GetReference()).Elem()
-		id := val.FieldByName("ID").Interface().(string)
-		currentSendingChannel = id
+		if node.GetText() != "." {
+			val := reflect.ValueOf(node.GetReference()).Elem()
+			id := val.FieldByName("ID").Interface().(string)
+			currentSendingChannel = id
+		}
 	})
 
 	go func() {
@@ -136,12 +158,13 @@ func messages(cmd *cobra.Command, args []string) error {
 // list is the function to add new messages to the rows of the table
 func list(dg *discordgo.Session, message *discordgo.MessageCreate) {
 	t, err := message.Timestamp.Parse()
+	t = t.In(time.Local)
 	if err != nil {
 		os.Exit(125)
 	}
 	if message.Author.ID != dg.State.User.ID && (len(currentSendingChannel) == 0 || (message.ChannelID == currentSendingChannel)) {
 		// write new content to the table
-		rows <- []string{t.Format(time.RFC822), message.Content, message.Author.Username}
+		rows <- []string{t.Format(time.Kitchen), message.Content, message.Author.Username}
 
 	}
 }
@@ -151,8 +174,8 @@ func generateView(dg *discordgo.Session) {
 	app = tview.NewApplication()
 	table = tview.NewTable().
 		SetBorders(true) // init table
-	grid = tview.NewGrid().SetRows(5, 0, 3).SetColumns(0, 0, 30).SetBorders(true)
-	form = tview.NewForm().AddInputField("Send:", "", 50, nil, nil).AddButton("Send Message", func() {
+	grid = tview.NewGrid().SetRows(5, 0, 3).SetColumns(30, 0, 30).SetBorders(true)
+	form = tview.NewForm().AddInputField("Send:", "", 30, nil, nil).AddButton("Send Message", func() {
 		sendMessage(dg, form.GetFormItem(0).(*tview.InputField).GetText())
 		form.GetFormItem(0).(*tview.InputField).SetText("")
 	}) // create form and add function for when the button is clicked
@@ -227,7 +250,7 @@ func updateTable(rows <-chan []string) {
 					table.SetCell(r, c,
 						tview.NewTableCell(allRows[word]).
 							SetTextColor(color).
-							SetAlign(tview.AlignCenter))
+							SetAlign(tview.AlignCenter).SetSelectable(true))
 					word = (word + 1) % len(allRows)
 				}
 			}
