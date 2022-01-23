@@ -5,7 +5,7 @@ The motivation for this project comes primarily from the intensive and bloating 
 
 **How to install Korero**
 - 
-- Korero is supported on Fedora 34 and 35, and can be installed via dnf/yum by running: `sudo dnf install korero`.
+- Korero is supported on Fedora 34 and 35, and can be installed via dnf/yum by running: `sudo dnf copr enable cdoern/korero` followed by `sudo dnf install korero`.
 - Korero can be built from source by cloning this repository and running `make korero` within the project folder. The Korero binary will then be placed in `bin/korero`.
 
 **Usage**

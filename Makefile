@@ -37,3 +37,14 @@ bin/korero: .gopathok $(SOURCES) go.mod go.sum
 
 .PHONY: korero
 korero: bin/korero
+
+
+bin/korero-copr: $(SOURCES)
+	$(GOCMD) build \
+		$(BUILDFLAGS) \
+		$(GO_LDFLAGS) '' \
+		-tags "" \
+		-o $@ ./cmd/korero
+
+.PHONY: korero-copr
+korero-copr: bin/korero-copr
