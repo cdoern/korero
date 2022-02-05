@@ -1,14 +1,14 @@
 Name: korero
-Version: 0.1.0
+Version: 0.1.1
 Release: 1
-Summary: Send, recieve and manage messages on multiple platforms
+Summary: Send, receive and manage messages on multiple platforms
 Source0: https://github.com/cdoern/korero/archive/main.tar.gz
 License: ASL 2.0
 URL: https://github.com/cdoern/korero
 Requires: golang
 
 %description
-Korero is a terminal based messenger service that allows one to send, recieve and manage messages on multiple platforms.
+Korero is a terminal based messenger service that allows one to send, receive and manage messages on multiple platforms.
 Korero is in rapid development and currently supports discord messaging via the API.
 
 %prep

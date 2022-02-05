@@ -10,14 +10,11 @@ import (
 
 var (
 	rootCmd = &cobra.Command{
-		Use:              "korero [options]",
-		Long:             "Send, recieve and manage messages on multiple platforms",
-		SilenceUsage:     true,
-		SilenceErrors:    true,
-		TraverseChildren: true,
-		//PersistentPreRunE: persistentPreRunE,
-		//	RunE:                  validate.SubCommandExists,
-		//PersistentPostRunE:    persistentPostRunE,
+		Use:                   "korero [options]",
+		Long:                  "Send, receive and manage messages on multiple platforms",
+		SilenceUsage:          true,
+		SilenceErrors:         true,
+		TraverseChildren:      true,
 		DisableFlagsInUseLine: true,
 	}
 )

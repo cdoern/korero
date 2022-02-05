@@ -1,4 +1,4 @@
-# Korero: Send, recieve and manage messages on multiple platforms
+# Korero: Send, receive and manage messages on multiple platforms
 Korero is a terminal based messaging service, being built to interact with popular direct and group messaging services like discord, telegram, slack, and twitter. 
 
 The motivation for this project comes primarily from the intensive and bloating nature of messaging services, especially for lightweight machines. 
