@@ -1,5 +1,5 @@
 Name: korero
-Version: 0.1.0
+Version: 0.1.1
 Release: 1
 Summary: Send, receive and manage messages on multiple platforms
 Source0: https://github.com/cdoern/korero/archive/main.tar.gz
