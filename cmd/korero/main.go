@@ -10,7 +10,6 @@ func main() {
 	parent := rootCmd
 
 	parent.AddCommand(discord.DiscordCommand)
-
 	Execute()
 	os.Exit(0)
 }
